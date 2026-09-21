@@ -1,9 +1,16 @@
-"""Answer generation: turn retrieved chunks into a grounded, cited answer.
+"""Answer generation: turn retrieved chunks into a grounded, cited answer."""
 
-Phase 1 has no LLM wired in yet. generate_answer() builds the prompt and
-returns a placeholder. Tomorrow, fill in _call_llm() with a single API call
-(OpenAI or Anthropic) and nothing else in this file needs to change.
-"""
+import os
+import time
+
+from dotenv import load_dotenv
+from google import genai
+from google.genai import types
+
+load_dotenv()
+
+_client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+_MODEL = "gemini-flash-latest"
 
 _SYSTEM_INSTRUCTIONS = """You are the UniPods AI programme assistant. You answer questions from members \
 using ONLY the meeting transcript excerpts provided below. Rules:
@@ -35,10 +42,29 @@ def _build_prompt(question: str, chunks: list[dict]) -> str:
 
 
 def _call_llm(prompt: str) -> str:
-    # TODO: LLM call — replace this with a real OpenAI or Anthropic API call.
-    # e.g. response = client.messages.create(model=..., messages=[{"role": "user", "content": prompt}])
-    #      return response.content[0].text
-    return "[placeholder] LLM not connected yet — this is where the generated answer will appear."
+    last_err = None
+    for attempt in range(3):
+        try:
+            response = _client.models.generate_content(
+                model=_MODEL,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    temperature=0.2,  # low, so it stays faithful to the chunks
+                    max_output_tokens=600,
+                    # Without this, the model's internal "thinking" tokens
+                    # eat the whole budget and the visible answer gets cut
+                    # off mid-sentence (confirmed via finish_reason=MAX_TOKENS
+                    # with thoughts_token_count in the hundreds). Not needed
+                    # for straightforward grounded-answer synthesis anyway.
+                    thinking_config=types.ThinkingConfig(thinking_budget=0),
+                ),
+            )
+            return response.text.strip()
+        except Exception as e:
+            last_err = e
+            time.sleep(1.5 * (attempt + 1))
+    print(f"Gemini call failed after 3 attempts: {last_err}")
+    return "The assistant is temporarily unavailable. Please try again in a moment."
 
 
 def generate_answer(question: str, result: dict) -> str:
