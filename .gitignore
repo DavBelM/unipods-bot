@@ -17,3 +17,7 @@ chat.md
 .env
 openai.txt
 zapier.txt
+
+# whatsapp_bot.py session credentials — never commit
+neonize.db
+*.db
