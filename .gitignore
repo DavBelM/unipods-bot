@@ -21,3 +21,5 @@ zapier.txt
 # whatsapp_bot.py session credentials — never commit
 neonize.db
 *.db
+.vercel
+.env*
