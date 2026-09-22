@@ -43,6 +43,7 @@ from retrieval import retrieve
 load_dotenv()
 
 BOT_TRIGGER = os.environ.get("WHATSAPP_BOT_TRIGGER", "@unipods")
+WEB_APP_URL = os.environ.get("WEB_APP_URL", "https://unipods-bot.vercel.app")
 
 client = NewClient("unipods-bot")
 _supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
@@ -91,7 +92,10 @@ def on_message(client: NewClient, message: MessageEv):
         else []
     )
 
-    client.reply_message(answer, message, to=source.Chat)
+    # Point people to the full app for more depth / to ask follow-ups there.
+    reply_text = f"{answer}\n\n💬 Full chat + sources: {WEB_APP_URL}"
+
+    client.reply_message(reply_text, message, to=source.Chat)
     _log_query(question, answer, result["relevant"], sources)
     print(f"Replied: {answer[:80]}...")
 
