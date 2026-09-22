@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    { "source": "/ask", "destination": "/api/index" },
+    { "source": "/queries", "destination": "/api/index" },
+    { "source": "/", "destination": "/static/index.html" },
+    { "source": "/dashboard.html", "destination": "/static/dashboard.html" },
+    { "source": "/style.css", "destination": "/static/style.css" },
+    { "source": "/app.js", "destination": "/static/app.js" },
+    { "source": "/dashboard.css", "destination": "/static/dashboard.css" },
+    { "source": "/dashboard.js", "destination": "/static/dashboard.js" }
+  ]
+}
