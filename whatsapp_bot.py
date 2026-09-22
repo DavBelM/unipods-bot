@@ -45,6 +45,9 @@ load_dotenv()
 BOT_TRIGGER = os.environ.get("WHATSAPP_BOT_TRIGGER", "@unipods")
 WEB_APP_URL = os.environ.get("WEB_APP_URL", "https://unipods-bot.vercel.app")
 
+# If a question contains one of these, reply by DM instead of in the group.
+_PRIVATE_REQUEST = re.compile(r"\b(privately|in private|dm me|personal(ly)?)\b", re.IGNORECASE)
+
 client = NewClient("unipods-bot")
 _supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
 
@@ -81,8 +84,12 @@ def on_message(client: NewClient, message: MessageEv):
     if not question:
         return
 
+    private = bool(_PRIVATE_REQUEST.search(question)) and source.IsGroup
+    if private:
+        question = _PRIVATE_REQUEST.sub("", question).strip()
+
     who = message.Info.Pushname or "someone"
-    print(f"Q from {who}: {question}")
+    print(f"Q from {who}{' (private)' if private else ''}: {question}")
 
     result = retrieve(question)
     answer = generate_answer(question, result)
@@ -95,7 +102,7 @@ def on_message(client: NewClient, message: MessageEv):
     # Point people to the full app for more depth / to ask follow-ups there.
     reply_text = f"{answer}\n\n💬 Full chat + sources: {WEB_APP_URL}"
 
-    client.reply_message(reply_text, message, to=source.Chat)
+    client.reply_message(reply_text, message, to=source.Chat, reply_privately=private)
     _log_query(question, answer, result["relevant"], sources)
     print(f"Replied: {answer[:80]}...")
 
