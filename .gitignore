@@ -12,6 +12,10 @@ unipods_db/
 chat.txt
 chat.md
 *.mp4
+*.vcf
+WhatsApp Chat with */
+wadhwani_chat.txt
+chat_export*.txt
 
 # secrets — never commit real keys
 .env
