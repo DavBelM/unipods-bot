@@ -1,18 +1,31 @@
-"""Retrieval layer: embed a question and fetch the closest meeting chunks."""
+"""Retrieval layer: embed a question and fetch the closest meeting chunks.
 
-from sentence_transformers import SentenceTransformer
-import chromadb
+Backed by Supabase (pgvector) instead of the local Chroma index, and Gemini
+embeddings instead of local sentence-transformers — see migrate_to_supabase.py
+for the one-time migration that populated the 'chunks' table.
+"""
 
-_DB_PATH = "./unipods_db"
-_COLLECTION = "meetings"
+import os
 
-# Max distance for a chunk to count as relevant. Set from distance_check.py.
-# Lower = stricter.
-_RELEVANCE_THRESHOLD = 1.4
+from dotenv import load_dotenv
+from google import genai
+from google.genai import types
+from supabase import create_client
+
+load_dotenv()
+
+_EMBED_MODEL = "gemini-embedding-001"
+_EMBED_DIM = 768
+
+# Max cosine distance for a chunk to count as relevant. Set from
+# distance_check_supabase.py. Lower = stricter. Not comparable to the old
+# Chroma/sentence-transformers threshold (1.4) — different model, different
+# distance scale.
+_RELEVANCE_THRESHOLD = 0.40
 
 # Loaded once at import time so repeated calls to retrieve() are fast.
-_model = SentenceTransformer("all-MiniLM-L6-v2")
-_collection = chromadb.PersistentClient(path=_DB_PATH).get_collection(_COLLECTION)
+_gemini = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+_supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
 
 
 def retrieve(question: str, k: int = 4) -> dict:
@@ -24,25 +37,26 @@ def retrieve(question: str, k: int = 4) -> dict:
         "chunks": [ {"text","session","timestamp","distance"}, ... ]
       }
     """
-    embedding = _model.encode(question).tolist()
-    results = _collection.query(
-        query_embeddings=[embedding],
-        n_results=k,
-        include=["documents", "metadatas", "distances"],
+    response = _gemini.models.embed_content(
+        model=_EMBED_MODEL,
+        contents=question,
+        config=types.EmbedContentConfig(output_dimensionality=_EMBED_DIM),
     )
+    embedding = response.embeddings[0].values
 
-    chunks = []
-    for doc, meta, dist in zip(
-        results["documents"][0],
-        results["metadatas"][0],
-        results["distances"][0],
-    ):
-        chunks.append({
-            "text": doc,
-            "session": meta["session"],
-            "timestamp": meta["timestamp"],
-            "distance": dist,
-        })
+    result = _supabase.rpc(
+        "match_chunks", {"query_embedding": embedding, "match_count": k}
+    ).execute()
+
+    chunks = [
+        {
+            "text": row["text"],
+            "session": row["session"],
+            "timestamp": row["ts"],
+            "distance": row["distance"],
+        }
+        for row in result.data
+    ]
 
     best = chunks[0]["distance"] if chunks else float("inf")
     return {"relevant": best <= _RELEVANCE_THRESHOLD, "chunks": chunks}
