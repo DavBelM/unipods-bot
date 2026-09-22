@@ -61,6 +61,15 @@ header h1 {
   color: var(--muted);
 }
 
+.subtitle a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.subtitle a:hover {
+  text-decoration: underline;
+}
+
 #chat {
   flex: 1;
   overflow-y: auto;
