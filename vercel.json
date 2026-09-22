@@ -1,12 +1,17 @@
 {
-  "rewrites": [
-    { "source": "/ask", "destination": "/api/index" },
-    { "source": "/queries", "destination": "/api/index" },
-    { "source": "/", "destination": "/static/index.html" },
-    { "source": "/dashboard.html", "destination": "/static/dashboard.html" },
-    { "source": "/style.css", "destination": "/static/style.css" },
-    { "source": "/app.js", "destination": "/static/app.js" },
-    { "source": "/dashboard.css", "destination": "/static/dashboard.css" },
-    { "source": "/dashboard.js", "destination": "/static/dashboard.js" }
+  "framework": null,
+  "builds": [
+    { "src": "api/index.py", "use": "@vercel/python" },
+    { "src": "static/**", "use": "@vercel/static" }
+  ],
+  "routes": [
+    { "src": "/ask", "dest": "api/index.py" },
+    { "src": "/queries", "dest": "api/index.py" },
+    { "src": "/", "dest": "static/index.html" },
+    { "src": "/dashboard.html", "dest": "static/dashboard.html" },
+    { "src": "/style.css", "dest": "static/style.css" },
+    { "src": "/app.js", "dest": "static/app.js" },
+    { "src": "/dashboard.css", "dest": "static/dashboard.css" },
+    { "src": "/dashboard.js", "dest": "static/dashboard.js" }
   ]
 }
